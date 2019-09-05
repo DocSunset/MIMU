@@ -1,0 +1,57 @@
+#######################################
+# Syntax Coloring Map For MIMU Library
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+MIMUReading	KEYWORD1
+MIMU	KEYWORD1
+MIMU_MPU9250	KEYWORD1
+MIMUCalibrationConstants	KEYWORD1
+MIMUCalibrator	KEYWORD1
+MIMUFusionFilter	KEYWORD1
+MIMUFilterCoefficients	KEYWORD1
+Vector	KEYWORD1
+Matrix	KEYWORD1
+Quaternion	KEYWORD1
+
+#######################################
+# Headers (KEYWORD1)
+#######################################
+
+MIMUFUSION	KEYWORD1
+TRIAD	KEYWORD1
+LinearAlgebraTypes	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+update_data_buffer	KEYWORD2
+readInto	KEYWORD2
+readForMillis	KEYWORD2
+calibrate	KEYWORD2
+setCalibration	KEYWORD2
+getCalibration	KEYWORD2
+resetAlignment	KEYWORD2
+setAlignment	KEYWORD2
+updateTransforms	KEYWORD2
+initializeFrom	KEYWORD2
+fuse	KEYWORD2
+getPeriod	KEYWORD2
+getZeroGravityAccl	KEYWORD2
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+cc	KEYWORD2
+fc	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+
