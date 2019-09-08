@@ -9,15 +9,16 @@
  */
 
 #include <LinearAlgebraTypes.h>
-#include "arduino.h" // for millis
+#include "arduino.h" // for millis, SDA, SCL
 
 struct MIMUReading
 {
+    static constexpr int size = 10;
     Vector accl; // when calibrated, should be in units of gravity (g)
     Vector gyro; // when calibrated, should be in radians per second (rad/s)
     Vector magn; // when calibrated, should be normalized onto the unit sphere (0.-1.)
     float timestamp;
-    float data[10]; // useful when sending the data, e.g. via Open Sound Control
+    float data[size]; // useful when sending the data, e.g. via Open Sound Control
 
     MIMUReading() 
     :   accl(), gyro(), magn(), timestamp{0} {}
@@ -50,7 +51,7 @@ class MIMU
 {
 public:
     // Use the constructor to set the I2C hardware constants
-    MIMU(const int& sdapin, const int& sclpin) 
+    MIMU(const int& sdapin = SDA, const int& sclpin = SCL) 
     :   sda{sdapin}, scl{sclpin} {}
 
     // Override the setup method to connect to the I2C sensor 
