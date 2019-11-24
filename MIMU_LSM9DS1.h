@@ -10,7 +10,7 @@
  */
 
 #include <MIMU.h>
-#include <SparkFunLSM9DS1.h>
+#include <SparkFunLSM9DS1.h> // https://github.com/sparkfun/SparkFun_LSM9DS1_Arduino_Library
 
 class MIMU_LSM9DS1 : public MIMU
 {
