@@ -15,7 +15,7 @@
 struct MIMUFilterCoefficients
 {
     // note: trust is given to the user to set these parameters wisely
-    MIMUFilterCoefficients(float a = 3, float b = 0, float c = 1, float d = 1)
+    MIMUFilterCoefficients(float a = 3, float b = 0, float c = 1, float d = 0)
         : k_P{a}, k_I{b}, k_a{c}, k_m{d} {}
     float k_P; // the proportional feedback gain parameter   (e.g. 0.0 to 2PI)
     float k_I; // the integral feedback gain parameter       (e.g. 0.0 to 2PI)
