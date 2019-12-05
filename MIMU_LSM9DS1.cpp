@@ -25,12 +25,12 @@ bool MIMU_LSM9DS1::readInto(MIMUReading& outputreading)
     outputreading.accl = Vector(
         (float)sensor.ax, // in g's: sensor.calcAccel(sensor.ax)
         (float)sensor.ay, // in g's: sensor.calcAccel(sensor.ay)
-        (float)sensor.az ); // in g's: sensor.calcAccel(sensor.az)
+        -(float)sensor.az ); // in g's: sensor.calcAccel(sensor.az)
 
     outputreading.gyro = Vector(
         (float)sensor.calcGyro(sensor.gx) * DEG_TO_RAD,
         (float)sensor.calcGyro(sensor.gy) * DEG_TO_RAD,
-        (float)sensor.calcGyro(sensor.gz) * DEG_TO_RAD );
+        -(float)sensor.calcGyro(sensor.gz) * DEG_TO_RAD );
 
     outputreading.magn = Vector(
         (float)sensor.mx, // in gauss: sensor.calcMag(sensor.mx)

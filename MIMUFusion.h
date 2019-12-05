@@ -15,10 +15,12 @@
 struct MIMUFilterCoefficients
 {
     // note: trust is given to the user to set these parameters wisely
-    float k_P = 3; // the proportional feedback gain parameter   (e.g. 0.0 to 2PI)
-    float k_I = 0; // the integral feedback gain parameter       (e.g. 0.0 to 2PI)
-    float k_a = 1; // accelerometer gain, confidence in accl data (e.g. 0.0 to 1.0)
-    float k_m = 1; // magnetometer gain, confidence in magn data (e.g. 0.0 to 1.0)
+    MIMUFilterCoefficients(float a = 3, float b = 0, float c = 1, float d = 1)
+        : k_P{a}, k_I{b}, k_a{c}, k_m{d} {}
+    float k_P; // the proportional feedback gain parameter   (e.g. 0.0 to 2PI)
+    float k_I; // the integral feedback gain parameter       (e.g. 0.0 to 2PI)
+    float k_a; // accelerometer gain, confidence in accl data (e.g. 0.0 to 1.0)
+    float k_m; // magnetometer gain, confidence in magn data (e.g. 0.0 to 1.0)
 };
 
 class MIMUFusionFilter

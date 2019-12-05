@@ -33,7 +33,7 @@ bool MIMU_MPU9250::readInto(MIMUReading& outputreading)
     outputreading.magn = Vector(
 	(float)sensor.magCount[1] * sensor.mRes,
 	(float)sensor.magCount[0] * sensor.mRes,
-	-(float)sensor.magCount[2] * sensor.mRes );
+	(float)sensor.magCount[2] * sensor.mRes );
 
     return true;
 }

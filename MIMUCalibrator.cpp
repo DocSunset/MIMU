@@ -19,8 +19,8 @@ void MIMUCalibrator::setAlignment(
 {
     cc.alignmentrotation = TRIAD(ybasis, 
                                  zbasis, 
-                                 Vector::UnitY(), 
-                                 -Vector::UnitZ());
+                                 -Vector::UnitY(), 
+                                 Vector::UnitZ());
     updateTransforms();
 }
 

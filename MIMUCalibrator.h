@@ -38,6 +38,9 @@ public:
         updateTransforms();
     }
 
+    // Reset calibration constants and transforms
+    void resetCalibration() { setCalibration(MIMUCalibrationConstants{}); }
+
     // Inspect the calibration constants
     const MIMUCalibrationConstants& getCalibration() const {return cc;}
 
