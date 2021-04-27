@@ -9,7 +9,7 @@
  */
 
 #include <LinearAlgebraTypes.h>
-#include "arduino.h" // for millis, SDA, SCL
+#include "Arduino.h" // for millis, SDA, SCL
 
 struct MIMUReading
 {
@@ -65,7 +65,7 @@ public:
 
     // Returns the average of as many readings as can be made in p milliseconds
     // Useful for certain calibration and alignment procedures
-    MIMUReading readForMillis(int p)
+    MIMUReading readForMillis(unsigned int p)
     {
         MIMUReading outputreading(Vector::Zero());
         MIMUReading newreading;

@@ -3,7 +3,6 @@
 
 void MIMU_LSM9DS1::setup()
 {
-    Wire.begin(sda, scl);
     sensor.settings.device.commInterface = IMU_MODE_I2C;
     sensor.settings.device.mAddress = LSM9DS1_M_ADDR(1);
     sensor.settings.device.agAddress = LSM9DS1_AG_ADDR(1);

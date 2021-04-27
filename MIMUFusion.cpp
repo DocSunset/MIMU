@@ -1,6 +1,6 @@
 #include <MIMUFusion.h>
 #include <TRIAD.h>
-#include "arduino.h"
+#include "Arduino.h"
 
 void MIMUFusionFilter::setup()
 { 

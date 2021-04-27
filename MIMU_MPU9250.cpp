@@ -2,7 +2,6 @@
 
 void MIMU_MPU9250::setup()
 {
-    Wire.begin(sda, scl);
     sensor.initMPU9250();
     sensor.initAK8963(sensor.magCalibration);
     sensor.getGres();
