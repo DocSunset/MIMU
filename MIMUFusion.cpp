@@ -12,8 +12,8 @@ Quaternion MIMUFusionFilter::initializeFrom(
         const Vector& v_a, 
         const Vector& v_m)
 {
-    Matrix orientation = TRIAD(Vector::UnitZ(), Vector::UnitY(), v_a, v_m);
-    q = Quaternion(orientation);
+    rotation = TRIAD(Vector::UnitZ(), Vector::UnitY(), v_a, v_m);
+    q = Quaternion(rotation);
     q.normalize();
     return q;
 }
@@ -28,7 +28,7 @@ void MIMUFusionFilter::calculatePeriod()
 Quaternion MIMUFusionFilter::fuse(Vector omega, Vector v_a, Vector v_m) 
 {
     calculatePeriod();
-    Matrix rotation = q.toRotationMatrix();
+    rotation = q.toRotationMatrix();
     Matrix inverse  = q.conjugate().toRotationMatrix();
 
     v_a_zero_g = v_a - inverse.col(2); // zero-g accl in sensor frame

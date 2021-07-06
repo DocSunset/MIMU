@@ -37,10 +37,11 @@ public:
 
     MIMUFilterCoefficients fc{};
 
+    Quaternion q;   // the estimate of the orientation of the sensor
+    Matrix rotation;
 private:
     void calculatePeriod();
 
-    Quaternion q;   // the estimate of the orientation of the sensor
     Quaternion q_dot; // rate of change of orientation (angular velocity)
     Vector b_hat;   // integral of the error estimate
     Vector h;
