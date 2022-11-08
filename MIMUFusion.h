@@ -9,7 +9,8 @@
  * source implementations in C++ and Matlab
  */
 
-#ifdef Arduino_h
+// TODO: a better way of deciding whether to include eigen or arduino eigen
+#ifdef ESP32
     #include "ArduinoEigen.h"
     #include "ArduinoEigen/Eigen/Geometry"
 #else
