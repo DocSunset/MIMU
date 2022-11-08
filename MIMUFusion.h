@@ -2,14 +2,25 @@
 #define MIMU_FUSION_H
 
 /* 
- * Fusion.h - A MIMU sensor fusion algorithm This is an implementation of an
+ * MIMUFusion.h - A MIMU sensor fusion algorithm This is an implementation of an
  * explicit complementary filter as described by Mahony et al. in their 2008
  * paper [1], and by Madgwick in his PhD thesis [2]. The implementation is
  * based on a close reading of these sources, as well as Madgwick's open
  * source implementations in C++ and Matlab
  */
 
-#include <LinearAlgebraTypes.h>
+#ifdef Arduino_h
+    #include "ArduinoEigen.h"
+    #include "ArduinoEigen/Eigen/Geometry"
+#else
+    #include <Eigen>
+    #include <Eigen/Geometry>
+#endif
+
+typedef Eigen::Vector3f Vector;
+typedef Eigen::Matrix3f Matrix;
+typedef Eigen::Quaternionf Quaternion;
+typedef Eigen::AngleAxisf AngleAxis;
 
 // Coefficients struct available to make it easier to save them in EEPROM
 struct MIMUFilterCoefficients
@@ -30,7 +41,7 @@ public:
 
     Quaternion initializeFrom(const Vector& v_a, const Vector& v_m);
 
-    Quaternion fuse(Vector omega, Vector v_a, Vector v_m);
+    Quaternion fuse(Vector omega, Vector v_a, Vector v_m, float period);
 
     float getPeriod() const {return period;}
     Vector getZeroGravityAccl() {return v_a_zero_g;}
@@ -39,8 +50,6 @@ public:
 
     Quaternion q;   // the estimate of the orientation of the sensor
     Matrix rotation;
-private:
-    void calculatePeriod();
 
     Quaternion q_dot; // rate of change of orientation (angular velocity)
     Vector b_hat;   // integral of the error estimate
@@ -50,15 +59,12 @@ private:
     Vector v_hat_m;
     Vector v_hat_a;
     Vector w_mes;
-    int now;
-    int before;
-    float period;
 };
 
 // [1] Mahony, Robert, Tarek Hamel, and Jean-Michel Pflimlin. 2008. 
-//     “Nonlinear Complementary Filters on the Special Orthogonal Group.” 
-//     IEEE Transactions on Automatic Control 53 (5): 1203–18. 
-// [2] Madgwick, Sebastian O H. 2014. “AHRS Algorithms and Calibration
-//     Solutions to Facilitate New Applications Using Low-Cost MEMS.”
+//     "Nonlinear Complementary Filters on the Special Orthogonal Group."
+//     IEEE Transactions on Automatic Control 53 (5): 1203-18. 
+// [2] Madgwick, Sebastian O H. 2014. "AHRS Algorithms and Calibration
+//     Solutions to Facilitate New Applications Using Low-Cost MEMS."
 //     PhD Thesis. Department of Mechanical Engineering. University of Bristol.
 #endif

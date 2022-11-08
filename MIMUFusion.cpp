@@ -1,6 +1,5 @@
 #include <MIMUFusion.h>
 #include <TRIAD.h>
-#include "Arduino.h"
 
 void MIMUFusionFilter::setup()
 { 
@@ -18,16 +17,8 @@ Quaternion MIMUFusionFilter::initializeFrom(
     return q;
 }
 
-void MIMUFusionFilter::calculatePeriod()
+Quaternion MIMUFusionFilter::fuse(Vector omega, Vector v_a, Vector v_m, float period) 
 {
-    now = micros();
-    period = (float)(now - before) / 1000000.0f;
-    before = now;
-}
-
-Quaternion MIMUFusionFilter::fuse(Vector omega, Vector v_a, Vector v_m) 
-{
-    calculatePeriod();
     rotation = q.toRotationMatrix();
     Matrix inverse  = q.conjugate().toRotationMatrix();
 
