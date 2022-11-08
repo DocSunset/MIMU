@@ -61,6 +61,8 @@ public:
     Vector w_mes;
 };
 
+Matrix TRIAD(Vector v1, Vector v2, Vector w1, Vector w2);
+
 // [1] Mahony, Robert, Tarek Hamel, and Jean-Michel Pflimlin. 2008. 
 //     "Nonlinear Complementary Filters on the Special Orthogonal Group."
 //     IEEE Transactions on Automatic Control 53 (5): 1203-18. 
