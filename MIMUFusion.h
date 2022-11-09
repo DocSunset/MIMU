@@ -27,12 +27,12 @@ typedef Eigen::AngleAxisf AngleAxis;
 struct MIMUFilterCoefficients
 {
     // note: trust is given to the user to set these parameters wisely
-    MIMUFilterCoefficients(float a = 3, float b = 0, float c = 1, float d = 0)
-        : k_P{a}, k_I{b}, k_a{c}, k_m{d} {}
-    float k_P; // the proportional feedback gain parameter   (e.g. 0.0 to 2PI)
-    float k_I; // the integral feedback gain parameter       (e.g. 0.0 to 2PI)
-    float k_a; // accelerometer gain, confidence in accl data (e.g. 0.0 to 1.0)
-    float k_m; // magnetometer gain, confidence in magn data (e.g. 0.0 to 1.0)
+    float k_P = 3; // the proportional feedback gain parameter   (e.g. 0.0 to 2PI)
+    float k_I = 0; // the integral feedback gain parameter       (e.g. 0.0 to 2PI)
+    float k_a = 1; // accelerometer gain, confidence in accl data (e.g. 0.0 to 1.0)
+    float k_m = 0; // magnetometer gain, confidence in magn data (e.g. 0.0 to 1.0)
+    float movement_threshold = 0.01; // threshold above which the derivative of acceleration indicates movement
+    float gyro_alpha = 0.9; // first order IIR low-pass coeffecient for smoothing gyro bias updates
 };
 
 class MIMUFusionFilter
@@ -44,9 +44,6 @@ public:
 
     Quaternion fuse(Vector omega, Vector v_a, Vector v_m, float period);
 
-    float getPeriod() const {return period;}
-    Vector getZeroGravityAccl() {return v_a_zero_g;}
-
     MIMUFilterCoefficients fc{};
 
     Quaternion q;   // the estimate of the orientation of the sensor
@@ -56,6 +53,12 @@ public:
     Vector b_hat;   // integral of the error estimate
     Vector h;
     Vector b;
+    Vector v_anm1; // previous accelerometer measurement
+    Vector v_avg_a; // exponential rolling average of accelerometer measurement
+    Vector v_dot_a; // first difference (i.e. "derivative") of accelerometer measurement, used to detect movement
+    bool stationary;
+    Vector omega_tilde; // estimated gyro bias
+    Vector omega_hat; // estimated angular velocity in radians per second
     Vector v_a_zero_g; // global linear acceleration
     Vector v_hat_m;
     Vector v_hat_a;

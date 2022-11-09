@@ -4,6 +4,8 @@ void MIMUFusionFilter::setup()
 { 
     q.setIdentity();
     b_hat.setZero();
+    omega_tilde.setZero();
+    stationary = false;
 }
 
 Quaternion MIMUFusionFilter::initializeFrom(
@@ -18,41 +20,72 @@ Quaternion MIMUFusionFilter::initializeFrom(
 
 Quaternion MIMUFusionFilter::fuse(Vector omega, Vector v_a, Vector v_m, float period) 
 {
-    rotation = q.toRotationMatrix();
-    Matrix inverse  = q.conjugate().toRotationMatrix();
+    bool accl = v_a.x() != 0 || v_a.y() != 0 || v_a.z() != 0;
+    bool magn = v_m.x() != 0 || v_m.y() != 0 || v_m.z() != 0;
+    w_mes = Vector::Zero();
 
-    v_a_zero_g = v_a - inverse.col(2); // zero-g accl in sensor frame
-    v_a_zero_g = inverse * v_a_zero_g; // zero-g accl in global frame
+    Matrix inverse  = accl || magn ? q.conjugate().toRotationMatrix() : Matrix::Zero();
 
-    v_a.normalize();
-    v_m.normalize();
-    v_m = v_a.cross(v_m);
-
-    h = rotation * v_m;
-    b = Vector( sqrt(h.x()*h.x() + h.y()*h.y()), 0, h.z() );
-
-    v_hat_m = inverse * b; // estimated direction of magnetic field
-    v_hat_a = inverse.col(2); // estimated gravity vector
-
-    // see eqs. (32c) and (48a) in Mahoney et al. 2008
-    w_mes = v_a.cross(v_hat_a) * fc.k_a + v_m.cross(v_hat_m) * fc.k_m;
-
-    // error correction is added to omega (angular rate) before integrating
-    if (fc.k_I > 0.0)
+    if (accl)
     {
-	    b_hat += w_mes * period; // see eq. (48c)
-	    omega += fc.k_P * w_mes + fc.k_I * b_hat ;
+        // detect motion
+        v_avg_a = 0.5 * v_a + 0.5 * v_anm1;
+        v_dot_a = v_avg_a - v_anm1;
+        stationary = v_dot_a.dot(v_dot_a) < fc.movement_threshold;
+        v_anm1 = v_a;
+
+        v_a_zero_g = v_a - inverse.col(2); // zero-g accl in sensor frame
+        v_a_zero_g = inverse * v_a_zero_g; // zero-g accl in global frame
+
+        v_hat_a = inverse.col(2); // estimated gravity vector
+
+        v_a.normalize();
+        float linear_accl_amount = v_a_zero_g.norm();
+        constexpr float max_acceptable_linear_accl = 1.0f; // we reduce our confidence to zero as the norm of linear acceleration reaches the max acceptable limit
+        if (linear_accl_amount > max_acceptable_linear_accl) linear_accl_amount = max_acceptable_linear_accl;
+        w_mes += v_a.cross(v_hat_a) * fc.k_a * (1.0f - linear_accl_amount)/max_acceptable_linear_accl;
     }
-    else
+    if (magn)
     {
-	    b_hat.setZero(); // Madgwick: "prevent integral windup"
-	    omega += fc.k_P * w_mes;
+        v_m.normalize();
+        v_m = inverse.col(2).cross(v_m);
+        h = rotation * v_m;
+        b = Vector( sqrt(h.x()*h.x() + h.y()*h.y()), 0, h.z() );
+
+        v_hat_m = inverse * b; // estimated direction of magnetic field
+        w_mes += v_m.cross(v_hat_m) * fc.k_m;
     }
 
-    q_dot = q * Quaternion(0, omega.x(), omega.y(), omega.z());
-    q.coeffs() += 0.5 * q_dot.coeffs() * period;
+    if (stationary)
+    {
+        // update gyro bias estimate
+        //omega_tilde = (1.0 - fc.gyro_alpha) * omega + fc.gyro_alpha * omega_tilde;
+    }
+
+    // reject gyro bias
+    omega_hat = omega - omega_tilde;
+
+    if (w_mes.x() != 0 || w_mes.y() != 0 || w_mes.z() != 0)
+    {
+        // error correction is added to omega (angular rate) before integrating
+        if (fc.k_I > 0.0)
+        {
+    	    b_hat += w_mes * period; // see eq. (48c)
+    	    omega_hat += fc.k_P * w_mes + fc.k_I * b_hat ;
+        }
+        else
+        {
+    	    b_hat.setZero(); // Madgwick: "prevent integral windup"
+    	    omega_hat += fc.k_P * w_mes;
+        }
+    }
+
+    q_dot = q * Quaternion(0, omega_hat.x(), omega_hat.y(), omega_hat.z());
+    q.coeffs() += -0.5 * q_dot.coeffs() * period;
 
     q.normalize(); 
+    rotation = q.toRotationMatrix();
+
     return q;
 }
 
