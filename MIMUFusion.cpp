@@ -1,11 +1,17 @@
 #include <MIMUFusion.h>
+#include <iostream>
 
 void MIMUFusionFilter::setup()
 { 
     q.setIdentity();
     b_hat.setZero();
-    omega_tilde.setZero();
+    omega_bias.setZero();
+    v_m_maxima.setZero();
+    v_m_minima.setZero();
+    v_m_bias.setZero();
     stationary = false;
+    avg_norm_of_gravity = 9.81;
+    count_of_gravity_samples = 1;
 }
 
 Quaternion MIMUFusionFilter::initializeFrom(
@@ -34,19 +40,28 @@ Quaternion MIMUFusionFilter::fuse(Vector omega, Vector v_a, Vector v_m, float pe
         stationary = v_dot_a.dot(v_dot_a) < fc.movement_threshold;
         v_anm1 = v_a;
 
-        v_a_zero_g = v_a - inverse.col(2); // zero-g accl in sensor frame
+        if (stationary)
+        {
+            avg_norm_of_gravity += (v_a.norm() - avg_norm_of_gravity) / count_of_gravity_samples;
+            count_of_gravity_samples += 1;
+        }
+        v_a_zero_g = v_a + inverse.col(2) * avg_norm_of_gravity; // zero-g accl in sensor frame
         v_a_zero_g = inverse * v_a_zero_g; // zero-g accl in global frame
 
         v_hat_a = inverse.col(2); // estimated gravity vector
 
-        v_a.normalize();
         float linear_accl_amount = v_a_zero_g.norm();
-        constexpr float max_acceptable_linear_accl = 1.0f; // we reduce our confidence to zero as the norm of linear acceleration reaches the max acceptable limit
-        if (linear_accl_amount > max_acceptable_linear_accl) linear_accl_amount = max_acceptable_linear_accl;
-        w_mes += v_a.cross(v_hat_a) * fc.k_a * (1.0f - linear_accl_amount)/max_acceptable_linear_accl;
+        float linear_adjust = stationary ? 1.0f
+                            : linear_accl_amount > fc.max_linear_threshold ? 0.0f
+                            : (fc.max_linear_threshold - linear_accl_amount)/fc.max_linear_threshold;
+        std::cout << linear_accl_amount << " " << linear_adjust << std::endl;
+
+        v_a.normalize();
+        w_mes += v_a.cross(v_hat_a) * fc.k_a * linear_adjust;
     }
     if (magn)
     {
+        magnetometerErrorCompensation(v_m);
         v_m.normalize();
         v_m = inverse.col(2).cross(v_m);
         h = rotation * v_m;
@@ -59,11 +74,11 @@ Quaternion MIMUFusionFilter::fuse(Vector omega, Vector v_a, Vector v_m, float pe
     if (stationary)
     {
         // update gyro bias estimate
-        //omega_tilde = (1.0 - fc.gyro_alpha) * omega + fc.gyro_alpha * omega_tilde;
+        omega_bias = (1.0 - fc.gyro_alpha) * omega + fc.gyro_alpha * omega_bias;
     }
 
     // reject gyro bias
-    omega_hat = omega - omega_tilde;
+    omega_hat = omega - omega_bias;
 
     if (w_mes.x() != 0 || w_mes.y() != 0 || w_mes.z() != 0)
     {
@@ -87,6 +102,11 @@ Quaternion MIMUFusionFilter::fuse(Vector omega, Vector v_a, Vector v_m, float pe
     rotation = q.toRotationMatrix();
 
     return q;
+}
+
+void MIMUFusionFilter::magnetometerErrorCompensation(Vector v_m)
+{
+    // try to estimate and compensation for magnetometer measurement error
 }
 
 Matrix TRIAD(Vector v1, Vector v2, Vector w1, Vector w2)

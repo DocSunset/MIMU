@@ -6,7 +6,10 @@
  * explicit complementary filter as described by Mahony et al. in their 2008
  * paper [1], and by Madgwick in his PhD thesis [2]. The implementation is
  * based on a close reading of these sources, as well as Madgwick's open
- * source implementations in C++ and Matlab
+ * source implementations in C++ and Matlab. 
+ * 
+ * Later, additional steps were added to the algorithm informed by the other
+ * papers cited below.
  */
 
 // TODO: a better way of deciding whether to include eigen or arduino eigen
@@ -31,12 +34,14 @@ struct MIMUFilterCoefficients
     float k_I = 0; // the integral feedback gain parameter       (e.g. 0.0 to 2PI)
     float k_a = 1; // accelerometer gain, confidence in accl data (e.g. 0.0 to 1.0)
     float k_m = 0; // magnetometer gain, confidence in magn data (e.g. 0.0 to 1.0)
-    float movement_threshold = 0.01; // threshold above which the derivative of acceleration indicates movement
-    float gyro_alpha = 0.9; // first order IIR low-pass coeffecient for smoothing gyro bias updates
+    float movement_threshold = 0.0001; // threshold above which the derivative of acceleration indicates movement
+    float gyro_alpha = 0.99; // first order IIR low-pass coeffecient for smoothing gyro bias updates
+    float max_linear_threshold = 5.0f; // linear acceleration threshold in m/s/s approaching which the accelerometer is ignored
 };
 
 class MIMUFusionFilter
 {
+    void magnetometerErrorCompensation(Vector v_m);
 public:
     void setup();
 
@@ -57,12 +62,17 @@ public:
     Vector v_avg_a; // exponential rolling average of accelerometer measurement
     Vector v_dot_a; // first difference (i.e. "derivative") of accelerometer measurement, used to detect movement
     bool stationary;
-    Vector omega_tilde; // estimated gyro bias
+    Vector omega_bias; // estimated gyro bias
     Vector omega_hat; // estimated angular velocity in radians per second
     Vector v_a_zero_g; // global linear acceleration
     Vector v_hat_m;
     Vector v_hat_a;
     Vector w_mes;
+    Vector v_m_maxima; // naive online magnetometer normalization maxima
+    Vector v_m_minima; // naive online magnetometer normalization minima
+    Vector v_m_bias;
+    double avg_norm_of_gravity;
+    double count_of_gravity_samples;
 };
 
 Matrix TRIAD(Vector v1, Vector v2, Vector w1, Vector w2);
