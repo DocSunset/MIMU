@@ -32,16 +32,15 @@ struct MIMUFilterCoefficients
     // note: trust is given to the user to set these parameters wisely
     float k_P = 3; // the proportional feedback gain parameter   (e.g. 0.0 to 2PI)
     float k_I = 0; // the integral feedback gain parameter       (e.g. 0.0 to 2PI)
-    float k_a = 1; // accelerometer gain, confidence in accl data (e.g. 0.0 to 1.0)
-    float k_m = 0; // magnetometer gain, confidence in magn data (e.g. 0.0 to 1.0)
+    float k_a = 0.25; // accelerometer gain, confidence in accl data (e.g. 0.0 to 1.0)
+    float k_m = 1.0; // magnetometer gain, confidence in magn data (e.g. 0.0 to 1.0)
     float movement_threshold = 0.0001; // threshold above which the derivative of acceleration indicates movement
     float gyro_alpha = 0.99; // first order IIR low-pass coeffecient for smoothing gyro bias updates
-    float max_linear_threshold = 5.0f; // linear acceleration threshold in m/s/s approaching which the accelerometer is ignored
 };
 
 class MIMUFusionFilter
 {
-    void magnetometerErrorCompensation(Vector v_m);
+    Vector magnetometerErrorCompensation(Vector v_m);
 public:
     void setup();
 
@@ -52,19 +51,20 @@ public:
     MIMUFilterCoefficients fc{};
 
     Quaternion q;   // the estimate of the orientation of the sensor
-    Matrix rotation;
+    Matrix rotation; // where the global coordinate axes end up when rotated to align with the sensor frame
+                     // or, the sensor frame basis vectors expressed in the global frame of reference
+                     // the inverse represents the global basis vectors expressed in the sensor frame of reference
 
     Quaternion q_dot; // rate of change of orientation (angular velocity)
     Vector b_hat;   // integral of the error estimate
-    Vector h;
-    Vector b;
     Vector v_anm1; // previous accelerometer measurement
     Vector v_avg_a; // exponential rolling average of accelerometer measurement
     Vector v_dot_a; // first difference (i.e. "derivative") of accelerometer measurement, used to detect movement
     bool stationary;
     Vector omega_bias; // estimated gyro bias
     Vector omega_hat; // estimated angular velocity in radians per second
-    Vector v_a_zero_g; // global linear acceleration
+    Vector v_a_lin; // sensor frame linear acceleration
+    Vector v_a_lin_gf; // global frame linear acceleration
     Vector v_hat_m;
     Vector v_hat_a;
     Vector w_mes;

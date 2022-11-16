@@ -1,5 +1,4 @@
 #include <MIMUFusion.h>
-#include <iostream>
 
 void MIMUFusionFilter::setup()
 { 
@@ -45,29 +44,19 @@ Quaternion MIMUFusionFilter::fuse(Vector omega, Vector v_a, Vector v_m, float pe
             avg_norm_of_gravity += (v_a.norm() - avg_norm_of_gravity) / count_of_gravity_samples;
             count_of_gravity_samples += 1;
         }
-        v_a_zero_g = v_a + inverse.col(2) * avg_norm_of_gravity; // zero-g accl in sensor frame
-        v_a_zero_g = inverse * v_a_zero_g; // zero-g accl in global frame
-
-        v_hat_a = inverse.col(2); // estimated gravity vector
-
-        float linear_accl_amount = v_a_zero_g.norm();
-        float linear_adjust = stationary ? 1.0f
-                            : linear_accl_amount > fc.max_linear_threshold ? 0.0f
-                            : (fc.max_linear_threshold - linear_accl_amount)/fc.max_linear_threshold;
-        std::cout << linear_accl_amount << " " << linear_adjust << std::endl;
+        v_hat_a = inverse.col(2) * avg_norm_of_gravity; // estimated gravity vector
+        v_a_lin = v_a - v_hat_a; // zero-g accl in sensor frame
+        v_a_lin_gf = inverse * v_a_lin; // zero-g accl in global frame
 
         v_a.normalize();
-        w_mes += v_a.cross(v_hat_a) * fc.k_a * linear_adjust;
+        w_mes += v_a.cross(v_hat_a) * fc.k_a;
     }
     if (magn)
     {
-        magnetometerErrorCompensation(v_m);
-        v_m.normalize();
-        v_m = inverse.col(2).cross(v_m);
-        h = rotation * v_m;
-        b = Vector( sqrt(h.x()*h.x() + h.y()*h.y()), 0, h.z() );
-
-        v_hat_m = inverse * b; // estimated direction of magnetic field
+        v_m = magnetometerErrorCompensation(v_m);
+        v_m = v_hat_a.cross(v_m);
+        v_m.normalize(); // normalize after the cross product so that the dip angle doesn't influence its magnitude
+        v_hat_m = inverse.col(0); // estimated cross product of gravity and magnetic field
         w_mes += v_m.cross(v_hat_m) * fc.k_m;
     }
 
@@ -96,7 +85,7 @@ Quaternion MIMUFusionFilter::fuse(Vector omega, Vector v_a, Vector v_m, float pe
     }
 
     q_dot = q * Quaternion(0, omega_hat.x(), omega_hat.y(), omega_hat.z());
-    q.coeffs() += -0.5 * q_dot.coeffs() * period;
+    q.coeffs() += 0.5 * q_dot.coeffs() * period;
 
     q.normalize(); 
     rotation = q.toRotationMatrix();
@@ -104,9 +93,24 @@ Quaternion MIMUFusionFilter::fuse(Vector omega, Vector v_a, Vector v_m, float pe
     return q;
 }
 
-void MIMUFusionFilter::magnetometerErrorCompensation(Vector v_m)
+Vector MIMUFusionFilter::magnetometerErrorCompensation(Vector v_m)
 {
-    // try to estimate and compensation for magnetometer measurement error
+    // try to estimate and compensate for magnetometer measurement error
+    // this naive first attempt simply tracks the extrema of the magnetometer measurements
+    // and uses this to estimate bias
+    // this assumes that the error in the measurement doesn't change over time
+    // (no scaling, axis non-orthogonality, or rotation issues are addressed by this)
+    // This approach also probably isn't very good since the
+    // only retained measurements are by definition probably outliers.
+    Vector max = v_m_maxima.cwiseMax(v_m);
+    Vector min = v_m_minima.cwiseMin(v_m);
+    if ((v_m_maxima.array() != max.array()).any() || (v_m_minima.array() != min.array()).any())
+    {
+        v_m_maxima = max;
+        v_m_minima = min;
+        v_m_bias = 0.5 * (min + max);
+    }
+    return v_m - v_m_bias;
 }
 
 Matrix TRIAD(Vector v1, Vector v2, Vector w1, Vector w2)
