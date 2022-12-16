@@ -3,10 +3,11 @@
 #include <iostream>
 
 #define READ_BYTE(addr, rx) if (!spi || !spi->read_bytes(addr, &rx, 1, spi->context)) return set_error_condition();
-#define WRITE_BYTE(addr, rx) if (!spi || !spi->write_bytes(addr, &tx, 1, spi->context)) return set_error_condition();
+#define WRITE_BYTE(addr, tx) if (!spi || !spi->write_bytes(addr, &tx, 1, spi->context)) return set_error_condition();
 
 void MIMUSensor::setup()
 {
+    auto& errstream = std::cerr;
     // TODO: search for other sensor types on available busses
     constexpr uint8_t whoami_addr = 0x00;
     constexpr uint8_t whoami_expected = 0xea;
@@ -25,7 +26,8 @@ void MIMUSensor::setup()
     constexpr uint8_t pwr_mgmt_1_value = 0x01;
     WRITE_BYTE(pwr_mgmt_1_addr, pwr_mgmt_1_value);
 
-    vTaskDelay(pdMS_TO_TICKS(500));
+    if (!delay) return set_error_condition();
+    delay(500);
     // configure the gyro and accelerometer
 
     constexpr uint8_t reg_bank_sel_addr = 0x7f;
@@ -100,13 +102,17 @@ void MIMUSensor::setup()
 
 void MIMUSensor::loop()
 {
-    DMA_ATTR static uint8_t raw_readout[32] = {0};
+    static uint8_t raw_readout[32] = {0};
     int16_t raw_gyro[3] = {0};
     int16_t raw_accl[3] = {0};
     float gyro[3] = {0.0f};
     float accl[3] = {0.0f};
 
-    if ((esp_err_t)icm_spi_read_bytes(0x2D, raw_readout, 18, (void*)this) != ESP_OK) return;
+    if (!spi->read_bytes(0x2D, raw_readout, 18, spi->context))
+    {
+        std::cerr << "unable to read from spi bus" << std::endl;
+        return;
+    }
 
     raw_accl[0] = (raw_readout[ 0] << 8) | (raw_readout[ 1] & 0xFF);
     raw_accl[1] = (raw_readout[ 2] << 8) | (raw_readout[ 3] & 0xFF);

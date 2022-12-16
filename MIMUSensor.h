@@ -1,6 +1,8 @@
 #ifndef MIMUSensor_h_INCLUDED
 #define MIMUSensor_h_INCLUDED
 
+#include <string_view>
+
 struct MIMUSensor
 {
     static auto name() { return "MIMUSensor"; }
@@ -182,6 +184,8 @@ struct MIMUSensor
     };
     spi_t * spi;
     // TODO: add support for I2C
+    
+    void (*delay)(uint32_t milliseconds);
 
     void setup();
 
