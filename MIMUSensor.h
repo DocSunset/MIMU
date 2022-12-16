@@ -56,7 +56,7 @@ struct MIMUSensor
         
         struct {
             static auto name() { return "device type"; }
-            static auto name() { return "device_type"; }
+            static auto c_name() { return "device_type"; }
             struct range {
                 std::string_view values[1] = {"ICM20948"}; 
                 DeviceType init{ICM20948};
@@ -187,7 +187,6 @@ struct MIMUSensor
 
     void loop();
 
-private:
     void update_sleep();
     void update_accelerometer_range();
     void update_gyroscope_range();
