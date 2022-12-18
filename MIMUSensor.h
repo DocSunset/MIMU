@@ -11,38 +11,38 @@ struct MIMUSensor
     struct inputs_t {
         struct {
             static auto name() { return "sleep"; }
-            void update(MIMUSensor& mimu) { mimu.update_sleep(); }
+            void update(MIMUSensor& mimu) { mimu._update_sleep(); }
             bool value;
         } sleep;
 
         struct {
             static auto name() { return "accelerometer range"; }
-            static auto c_name() { return "accelerometer_range"; }
+            static auto c_name() { return "accl_range"; }
             static auto unit() { return "g"; }
-            void update(MIMUSensor& mimu) { mimu.update_accelerometer_range(); }
+            void update(MIMUSensor& mimu) { mimu._update_accelerometer_range(); }
             float value;
-        } accelerometer_range;
+        } accl_range;
 
         struct {
             static auto name() { return "gyroscope range"; }
-            static auto c_name() { return "gyroscope_range"; }
+            static auto c_name() { return "gyro_range"; }
             static auto unit() { return "deg/s"; }
-            void update(MIMUSensor& mimu) { mimu.update_gyroscope_range(); }
+            void update(MIMUSensor& mimu) { mimu._update_gyroscope_range(); }
             float value;
-        } gyroscope_range;
+        } gyro_range;
 
         struct {
             static auto name() { return "magnetometer range"; }
-            static auto c_name() { return "magnetometer_range"; }
+            static auto c_name() { return "magn_range"; }
             static auto unit() { return "uT"; }
-            void update(MIMUSensor& mimu) { mimu.update_magnetometer_range(); }
+            void update(MIMUSensor& mimu) { mimu._update_magnetometer_range(); }
             float value;
-        } magnetometer_range;
+        } magn_range;
 
         struct {
             static auto name() { return "sampling rate"; }
             static auto c_name() { return "sampling_rate"; }
-            void update(MIMUSensor& mimu) { mimu.update_sampling_rate(); }
+            void update(MIMUSensor& mimu) { mimu._update_sampling_rate(); }
             float value;
         } sampling_rate;
     } inputs;
@@ -70,9 +70,10 @@ struct MIMUSensor
             static auto name() { return "raw"; }
             struct {
                 static auto name() { return "accelerometer"; }
+                static auto c_name() { return "accl"; }
                 struct {
                     static auto name() { return "sensitivity"; }
-                    static auto unit() { return "m/s/s/LSB"; }
+                    static auto unit() { return "g/LSB"; }
                     float value;
                 } sensitivity;
                 struct {
@@ -80,12 +81,13 @@ struct MIMUSensor
                     static auto c_name() { return "odr"; }
                     float value;
                 } odr;
-                uint16_t x;
-                uint16_t y;
-                uint16_t z;
-            } accelerometer;
+                int16_t x;
+                int16_t y;
+                int16_t z;
+            } accl;
             struct {
                 static auto name() { return "gyroscope"; }
+                static auto c_name() { return "gyro"; }
                 struct {
                     static auto name() { return "sensitivity"; }
                     static auto unit() { return "deg/s/LSB"; }
@@ -96,12 +98,13 @@ struct MIMUSensor
                     static auto c_name() { return "odr"; }
                     float value;
                 } odr;
-                uint16_t x;
-                uint16_t y;
-                uint16_t z;
-            } gyroscope;
+                int16_t x;
+                int16_t y;
+                int16_t z;
+            } gyro;
             struct {
                 static auto name() { return "magnetometer"; }
+                static auto c_name() { return "magn"; }
                 struct {
                     static auto name() { return "sensitivity"; }
                     static auto unit() { return "uT/LSB"; }
@@ -112,17 +115,18 @@ struct MIMUSensor
                     static auto c_name() { return "odr"; }
                     float value;
                 } odr;
-                uint16_t x;
-                uint16_t y;
-                uint16_t z;
-            } magnetometer;
+                int16_t x;
+                int16_t y;
+                int16_t z;
+            } magn;
         } raw;
 
         struct {
             static auto name() { return "normalized"; }
             struct {
                 static auto name() { return "accelerometer"; }
-                static auto unit() { return "m/s/s"; }
+                static auto c_name() { return "accl"; }
+                static auto unit() { return "g"; }
                 struct {
                     static auto name() { return "range"; }
                     struct {
@@ -137,9 +141,10 @@ struct MIMUSensor
                 float x;
                 float y;
                 float z;
-            } accelerometer;
+            } accl;
             struct {
                 static auto name() { return "gyroscope"; }
+                static auto c_name() { return "gyro"; }
                 static auto unit() { return "deg/s"; }
                 struct {
                     static auto name() { return "range"; }
@@ -155,9 +160,10 @@ struct MIMUSensor
                 float x;
                 float y;
                 float z;
-            } gyroscope;
+            } gyro;
             struct {
                 static auto name() { return "magnetometer"; }
+                static auto c_name() { return "magn"; }
                 static auto unit() { return "uT"; }
                 struct {
                     static auto name() { return "range"; }
@@ -173,7 +179,7 @@ struct MIMUSensor
                 float x;
                 float y;
                 float z;
-            } magnetometer;
+            } magn;
         } normalized;
     } outputs;
 
@@ -191,12 +197,12 @@ struct MIMUSensor
 
     void loop();
 
-    void update_sleep();
-    void update_accelerometer_range();
-    void update_gyroscope_range();
-    void update_magnetometer_range();
-    void update_sampling_rate();
-    void set_error_condition() { outputs.error_condition.value = true; }
+    void _update_sleep();
+    void _update_accelerometer_range();
+    void _update_gyroscope_range();
+    void _update_magnetometer_range();
+    void _update_sampling_rate();
+    void _set_error_condition() { outputs.error_condition.value = true; }
 };
 
 #endif // MIMUSensor_h_INCLUDED
