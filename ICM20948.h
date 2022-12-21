@@ -15,7 +15,12 @@ namespace MIMUICM20948
     static constexpr uint8_t user_bank_2 = 0x20;
     static constexpr uint8_t user_bank_3 = 0x30;
     static constexpr uint8_t i2c_slv_0_ctrl_addr = 0x05;
+    static constexpr uint8_t i2c_slv_1_ctrl_addr = 0x09;
+    static constexpr uint8_t i2c_slv_2_ctrl_addr = 0x0D;
+    static constexpr uint8_t i2c_slv_3_ctrl_addr = 0x11;
+    static constexpr uint8_t i2c_slv_4_ctrl_addr = 0x15;
     static constexpr uint8_t i2c_slv_0_enable = 0x80;
+    static constexpr uint8_t i2c_mst_status_addr = 0x17;
 
     void bank_select(MIMUSensor *mimu, uint8_t bank)
     {
@@ -33,11 +38,67 @@ namespace MIMUICM20948
 
     void power_management(MIMUSensor *mimu, uint8_t config)
     {
-        // wake up the device
         bank_select(mimu, user_bank_0);
         constexpr uint8_t pwr_mgmt_1_addr = 0x06;
         WRITE_BYTE(pwr_mgmt_1_addr, config);
         mimu->delay(500);
+    }
+
+    static constexpr uint8_t ak09916_i2c_addr = 0x0c;
+    void i2c_txn(MIMUSensor *mimu, uint8_t addr, uint8_t reg, uint8_t& byte, bool read)
+    {
+        bool write = !read;
+        // we use i2c_slv_4 for imperative single reads and writes
+        if (write) addr = addr & 0x7F; // mask off read bit
+        else addr = addr | 0x80; // raise read bit
+
+        constexpr uint8_t i2c_slv_4_addr_addr = 0x13;
+        WRITE_BYTE(i2c_slv_4_addr_addr, addr);
+
+        constexpr uint8_t i2c_slv_4_reg_addr = 0x14;
+        WRITE_BYTE(i2c_slv_4_reg_addr, reg);
+
+        if (write) {
+            constexpr uint8_t i2c_slv_4_do_addr = 0x16;
+            WRITE_BYTE(i2c_slv_4_do_addr, byte); // set data out
+        }
+
+        constexpr uint8_t i2c_slv_4_ctrl_value = 0xa0; // enable, disable register access
+        WRITE_BYTE(i2c_slv_4_ctrl_addr, i2c_slv_4_ctrl_value); // kick off transaction
+
+        constexpr int max_tries = 100;
+        int tries = 0;
+
+        uint8_t i2c_status = 0;
+        constexpr uint8_t i2c_slv4_done = 0x40;
+        constexpr uint8_t i2c_slv4_nack = 0x10;
+
+        bank_select(mimu, user_bank_0);
+
+        while (true)
+        {
+            READ_BYTE(i2c_mst_status_addr, i2c_status);
+            ++tries;
+            if (i2c_status & i2c_slv4_done) break;
+            if (tries == max_tries)
+            {
+                std::cerr << __FILE__":" << __LINE__ << ":" << __func__ << ": i2c txn timeout" << std::endl;
+                return;
+            }
+            mimu->delay(1);
+        }
+
+        if (i2c_status & i2c_slv4_nack)
+        {
+            std::cerr << __FILE__":" << __LINE__ << ":" << __func__ << ": i2c nack" << std::endl;
+            return;
+        }
+
+        if (read) {
+            constexpr uint8_t i2c_slv4_di_addr = 0x17;
+            bank_select(mimu, user_bank_3);
+            READ_BYTE(i2c_slv4_di_addr, byte);
+        }
     }
 
     void accl_gyro_setup(MIMUSensor *mimu)
@@ -65,40 +126,67 @@ namespace MIMUICM20948
 
     void magnetometer_setup(MIMUSensor *mimu)
     {
+        // conservatively manually reset all i2c controllers to ensure no transactions are ongoing
+        // to ensure that devices will not hang if we reset the aux i2c main node
         bank_select(mimu, user_bank_3);
-        // we use slv_4 for single byte writing when setting up, and otherwise use slv_0 for reading
+        constexpr uint8_t i2c_controller_default = 0x00;
+        WRITE_BYTE(i2c_slv_0_ctrl_addr, i2c_controller_default);
+        WRITE_BYTE(i2c_slv_1_ctrl_addr, i2c_controller_default);
+        WRITE_BYTE(i2c_slv_2_ctrl_addr, i2c_controller_default);
+        WRITE_BYTE(i2c_slv_3_ctrl_addr, i2c_controller_default);
+        WRITE_BYTE(i2c_slv_4_ctrl_addr, i2c_controller_default);
 
-        // set the I2C device address that will be accessed by the aux I2C main nodes
-        // to the I2C address of the magnetometer
-        constexpr uint8_t i2c_slv_0_addr_addr = 0x03;
-        constexpr uint8_t i2c_slv_4_addr_addr = 0x13;
-        constexpr uint8_t ak09916_i2c_addr = 0x0c;
-        WRITE_BYTE(i2c_slv_0_addr_addr, ak09916_i2c_addr);
-        WRITE_BYTE(i2c_slv_4_addr_addr, ak09916_i2c_addr);
+        // configure the aux i2c main node
+        constexpr uint8_t i2c_mst_ctrl_addr = 0x01;
+        constexpr uint8_t i2c_mst_ctrl_value = 0x17; // p_nsr set to generate stop between reads, clock set to 345.6 kHz
+        WRITE_BYTE(i2c_mst_ctrl_addr, i2c_mst_ctrl_value);
+
+        // enable the aux i2c main node
+        bank_select(mimu, user_bank_0);
+        constexpr uint8_t user_ctrl_addr = 0x03;
+        constexpr uint8_t user_ctrl_value = 0x21; // enable and reset I2C main node
+        WRITE_BYTE(user_ctrl_addr, user_ctrl_value);
+
+        bank_select(mimu, user_bank_3);
+
+        constexpr bool read = true;
+        constexpr bool write = false;
+
+        constexpr uint8_t max_tries = 100;
+        uint8_t tries = 0;
+        while (true)
+        {
+            constexpr uint8_t ak09916_wia_reg = 0x01;
+            constexpr uint8_t ak09916_wia = 0x09;
+            uint8_t ak09916_wia_readout = 0;
+
+            i2c_txn(mimu, ak09916_i2c_addr, ak09916_wia_reg, ak09916_wia_readout, read);
+            ++tries;
+            if (ak09916_wia == ak09916_wia_readout) break;
+            if (tries == max_tries)
+            {
+                std::cerr << __FILE__":" << __LINE__ << ":" << __func__ << ": unable to read ak09916 wia" << std::endl;
+                return;
+            }
+
+            WRITE_BYTE(user_ctrl_addr, user_ctrl_value); 
+        }
+        return;
 
         // set i2c slv 4 driver to access the magnetometer control register
-        constexpr uint8_t i2c_slv_4_reg_addr = 0x14;
-        constexpr uint8_t ak09916_cntl2_addr = 0x31;
-        WRITE_BYTE(i2c_slv_4_reg_addr, ak09916_cntl2_addr);
+        constexpr uint8_t ak09916_cntl2_reg = 0x31;
+        uint8_t ak09916_cntl2_value = 0x08;
+        i2c_txn(mimu, ak09916_i2c_addr, ak09916_cntl2_reg, ak09916_cntl2_value, write);
 
-        // set the i2c slv 4 driver to write (data out) the value for the magnetometer control register
-        constexpr uint8_t i2c_slv_4_do_addr = 0x16;
-        constexpr uint8_t ak09916_cntl2_value = 0x08;
-        WRITE_BYTE(i2c_slv_4_do_addr, ak09916_cntl2_value);
+        // configure i2c_slv_0 to continuously read the magnetometer
+        bank_select(mimu, user_bank_3);
+        constexpr uint8_t i2c_slv_0_addr_addr = 0x03;
+        WRITE_BYTE(i2c_slv_0_addr_addr, ak09916_i2c_addr);
 
-        // trigger the data out
-        constexpr uint8_t i2c_slv_4_ctrl_addr = 0x15;
-        constexpr uint8_t i2c_slv_4_ctrl_value = 0xa0;
-        WRITE_BYTE(i2c_slv_4_ctrl_addr, i2c_slv_4_ctrl_value);
-
-        mimu->delay(100);
-
-        // configure i2c slv 0 to access the beginning of the magnetometer data registers
         constexpr uint8_t i2c_slv_0_reg_addr = 0x04;
         constexpr uint8_t ak09916_data_addr = 0x17;
         WRITE_BYTE(i2c_slv_0_reg_addr, ak09916_data_addr);
 
-        // start i2c slv 0 driver continuous reads
         constexpr uint8_t i2c_slv_0_ctrl_value = i2c_slv_0_enable | 9; // enable and read one byte
         WRITE_BYTE(i2c_slv_0_ctrl_addr, i2c_slv_0_ctrl_value);
 
@@ -124,8 +212,8 @@ namespace MIMUICM20948
     {
         std::cout << "ICM20948 setup start" << std::endl;
         power_management(mimu, clock_sel_auto); // wake up
+        magnetometer_setup(mimu);
         accl_gyro_setup(mimu);
-        // magnetometer_setup(mimu);
         // enable_interrupts(mimu);
         std::cout << "ICM20948 setup complete" << std::endl;
         bank_select(mimu, user_bank_0); // it's important to reset to bank 0 before loop runs; loop assumes bank 0 so that it doesn't have to set it every time
